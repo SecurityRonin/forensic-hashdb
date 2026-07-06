@@ -1,0 +1,3 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+doc-valid-idents = ["NSRL", "CIRCL", "MalwareBazaar", "VirusShare", "Malshare", "AlienVaultOtx", "loldrivers", "BYOVD", "SHA-256", "MD5", "SHA1", ".."]

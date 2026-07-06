@@ -1,0 +1,45 @@
+# Standalone single-crate repo (empty [workspace] roots it, so cargo never joins
+# a parent workspace). Moved out of memory-forensic — it has cross-repo consumers
+# now (issen-mem memory path + issen-signatures disk/scan path). See ADR-0011.
+[workspace]
+
+[package]
+name = "forensic-hashdb"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "Apache-2.0"
+repository = "https://github.com/SecurityRonin/forensic-hashdb"
+homepage = "https://github.com/SecurityRonin/forensic-hashdb"
+documentation = "https://docs.rs/forensic-hashdb"
+authors = ["Albert Hui <albert@securityronin.com>"]
+description = "File hash databases for digital forensics — NSRL/CIRCL known-good, malware known-bad, known-vulnerable Windows drivers (loldrivers), and analyst-supplied MD5/SHA1/SHA256 feeds."
+keywords = ["forensics", "dfir", "hash", "nsrl", "malware"]
+categories = ["parser-implementations", "filesystem"]
+
+[dependencies]
+memmap2 = "0.9"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.rust]
+# mmap needs one bounded unsafe (known_good.rs); forbid can't be locally overridden,
+# so deny + a justified per-site #[allow].
+unsafe_code = "deny"
+
+[lints.clippy]
+pedantic                 = { level = "warn", priority = -1 }
+correctness              = { level = "deny", priority = -1 }
+suspicious               = { level = "deny", priority = -1 }
+# Panic-free: the known-good DB is an analyst-supplied file (Paranoid Gatekeeper).
+unwrap_used              = { level = "deny", priority = 0 }
+expect_used              = { level = "deny", priority = 0 }
+module_name_repetitions  = { level = "allow", priority = 1 }
+must_use_candidate       = { level = "allow", priority = 1 }
+missing_errors_doc       = { level = "allow", priority = 1 }
+missing_panics_doc       = { level = "allow", priority = 1 }
+doc_markdown             = { level = "allow", priority = 1 }
+cast_possible_truncation = { level = "allow", priority = 1 }
+cast_possible_wrap       = { level = "allow", priority = 1 }
+cast_sign_loss           = { level = "allow", priority = 1 }
