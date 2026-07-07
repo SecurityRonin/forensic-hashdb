@@ -1,0 +1,31 @@
+site_name: forensic-hashdb
+site_url: https://securityronin.github.io/forensic-hashdb/
+site_description: File hash databases for digital forensics — NSRL/CIRCL known-good, malware known-bad, loldrivers, and analyst-supplied MD5/SHA1/SHA256 feeds.
+repo_url: https://github.com/SecurityRonin/forensic-hashdb
+repo_name: SecurityRonin/forensic-hashdb
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue grey
+      accent: cyan
+  features:
+    - navigation.sections
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Validation: validation.md
+  - Privacy Policy: privacy.md
+  - Terms of Service: terms.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - pymdownx.superfences
+
+plugins:
+  - search

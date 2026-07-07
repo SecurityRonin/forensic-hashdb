@@ -1,0 +1,27 @@
+[package]
+name    = "forensic-hashdb-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+
+[[bin]]
+name = "fuzz_known_good"
+path = "fuzz_targets/fuzz_known_good.rs"
+test = false
+doc  = false
+
+[[bin]]
+name = "fuzz_feed"
+path = "fuzz_targets/fuzz_feed.rs"
+test = false
+doc  = false
+
+[dependencies]
+libfuzzer-sys   = "0.4"
+forensic-hashdb = { path = ".." }
+tempfile        = "3"
