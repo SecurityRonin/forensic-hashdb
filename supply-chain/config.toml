@@ -17,7 +17,7 @@ url = "https://raw.githubusercontent.com/google/rust-crate-audits/main/audits.to
 url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 
 [policy.forensic-hashdb]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [[exemptions.bitflags]]
 version = "2.13.0"
@@ -34,10 +34,6 @@ criteria = "safe-to-run"
 [[exemptions.fastrand]]
 version = "2.4.1"
 criteria = "safe-to-run"
-
-[[exemptions.forensic-hashdb]]
-version = "0.2.0"
-criteria = "safe-to-deploy"
 
 [[exemptions.getrandom]]
 version = "0.4.3"
