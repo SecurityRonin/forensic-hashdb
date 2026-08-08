@@ -6,126 +6,28 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  CARGO_TERM_COLOR: always
-  CARGO_INCREMENTAL: "0"
-  RUSTFLAGS: -Dwarnings
+permissions:
+  contents: read
 
 jobs:
-  fmt:
-    name: Format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-        with:
-          components: rustfmt
-      - run: cargo fmt --all --check
+  ci:
+    uses: SecurityRonin/fleet-ci/.github/workflows/rust-ci.yml@619094ad54edc586f5c2733358e00326b30790bd
+    with:
+      # The old MSRV job ran `cargo test` at 1.75, not a bare build. The
+      # default (`build`) would verify less than CI already did.
+      msrv-check: test
+      # The old coverage gate is the fleet per-line gate (strict, which is the
+      # default here) but it skipped test and fuzz scaffolding — written inside
+      # the inline Python as `if "/tests/" in cur or "/fuzz/" in cur: continue`,
+      # not as an --ignore-filename-regex flag. Same exclusion, expressed the
+      # way this workflow takes it. Verified load-bearing on origin/main:
+      #   tests/coverage.rs, fuzz/fuzz_targets/{fuzz_feed,fuzz_known_good}.rs
+      # all match, and re-running the shared gate's own rules over
+      # `cargo llvm-cov --workspace --all-features` with this regex gives
+      # 0 uncovered / 2 annotated exemptions — i.e. green, unchanged.
+      coverage-ignore-regex: "/tests/|/fuzz/"
 
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-        with:
-          components: clippy
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
-      - run: cargo clippy --all-targets -- -D warnings
-
-  test:
-    name: Test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
-      - run: cargo test --workspace
-
-  coverage:
-    name: Coverage (100% production lines)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-        with:
-          components: llvm-tools-preview
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
-      - run: cargo install cargo-llvm-cov --locked
-      - name: Fail on any uncovered production line (DA:n,0), honoring cov:unreachable
-        run: |
-          cargo llvm-cov --workspace --lcov --output-path cov.lcov
-          python3 - <<'PY'
-          import sys
-          def marked(path, n):
-              try:
-                  return "cov:unreachable" in open(path).read().splitlines()[n - 1]
-              except Exception:
-                  return False
-          cur, bad = None, []
-          for line in open("cov.lcov").read().splitlines():
-              if line.startswith("SF:"):
-                  cur = line[3:]
-              elif line.startswith("DA:") and cur:
-                  if "/tests/" in cur or "/fuzz/" in cur:
-                      continue
-                  n, hits = line[3:].split(",")
-                  if hits == "0" and not marked(cur, int(n)):
-                      bad.append(f"{cur}:{n}")
-          if bad:
-              print("Uncovered production lines — add a test or // cov:unreachable:")
-              print("\n".join(f"  {b}" for b in bad))
-              sys.exit(1)
-          print("100% production line coverage — no uncovered DA:n,0")
-          PY
-
-  deny:
-    name: Cargo Deny
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
-
-  msrv:
-    name: MSRV (1.75)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@1.75
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
-      - run: cargo test
-
-  fuzz-check:
-    name: Fuzz (build check)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # nightly
-        with:
-          toolchain: nightly
-          components: rust-src
-      - run: cargo install cargo-fuzz --locked
-      - run: cargo +nightly fuzz build
-
-  secrets:
-    name: Secret Scan (gitleaks)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-      - name: Install gitleaks
-        run: |
-          VERSION=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | jq -r '.tag_name[1:]')
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
-            | tar xz -C /tmp gitleaks
-      - name: Run gitleaks
-        run: /tmp/gitleaks detect --source .
-
+  # -- carried across verbatim from the previous ci.yml ---------------------
   geiger:
     name: Unsafe Audit (cargo-geiger)
     runs-on: ubuntu-latest
@@ -136,22 +38,3 @@ jobs:
       - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
       - run: cargo install cargo-geiger --locked
       - run: cargo geiger 2>&1 || true
-
-  vet:
-    name: Cargo Vet (supply-chain)
-    runs-on: ubuntu-latest
-    # Complements `deny` (known-bad advisories/licenses) with the supply-chain-
-    # injection layer: every dependency version must be human-source-reviewed or
-    # covered by an imported aggregate audit set (Google/Mozilla/Bytecode-Alliance/
-    # Embark). Config in supply-chain/{config,audits,imports}.toml.
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install cargo-vet
-        uses: taiki-e/install-action@59012be0884e296ca2da49b530610e72c49039ad # v2.81.6
-        with:
-          tool: cargo-vet
-      - name: Fetch dependencies
-        run: cargo fetch
-      - name: Check supply chain
-        run: cargo vet --locked
