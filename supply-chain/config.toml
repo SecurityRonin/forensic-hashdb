@@ -36,7 +36,7 @@ version = "2.4.1"
 criteria = "safe-to-run"
 
 [[exemptions.getrandom]]
-version = "0.4.3"
+version = "0.3.4"
 criteria = "safe-to-run"
 
 [[exemptions.libc]]
@@ -56,7 +56,7 @@ version = "1.21.4"
 criteria = "safe-to-run"
 
 [[exemptions.r-efi]]
-version = "6.0.0"
+version = "5.3.0"
 criteria = "safe-to-run"
 
 [[exemptions.rustix]]
